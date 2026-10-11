@@ -1,0 +1,18 @@
+node_modules/
+dist/
+release/
+out/
+coverage/
+.env
+.env.*
+*.sqlite
+*.sqlite3
+*.db
+*.log
+.DS_Store
+Thumbs.db*.bak
+JASS-Apply-India-Canada-Focus.ps1
+
+# Local backup files
+*.bak
+*.bak.*
