@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('node:path');
 const { createDatabase } = require('./store.cjs');
+const { refreshRssFeeds } = require('./feed-service.cjs');
 
 // Compatibility test for machines where Chromium graphics services fail.
 app.disableHardwareAcceleration();
@@ -142,12 +143,10 @@ function registerHandlers() {
     const url = validUrl(p.url);
     const type = ['RSS', 'API', 'Manual'].includes(p.type) ? p.type : 'Manual';
     if (p.id) {
-      db.prepare('UPDATE sources SET name=?,url=?,type=?,enabled=?,notes=? WHERE id=?')
-        .run(String(p.name).trim().slice(0, 200), url, type, p.enabled ? 1 : 0, String(p.notes || '').slice(0, 2000), Number(p.id));
+      db.prepare('UPDATE sources SET name=?,url=?,type=?,enabled=?,notes=?,region=?,last_checked_at=NULL,last_status=? WHERE id=?').run(String(p.name).trim().slice(0, 200), url, type, p.enabled ? 1 : 0, String(p.notes || '').slice(0, 2000), String(p.region || 'Global').slice(0, 50), 'Not checked', Number(p.id));
       return Number(p.id);
     }
-    return Number(db.prepare('INSERT INTO sources(name,url,type,enabled,notes) VALUES(?,?,?,?,?)')
-      .run(String(p.name).trim().slice(0, 200), url, type, p.enabled === false ? 0 : 1, String(p.notes || '').slice(0, 2000)).lastInsertRowid);
+    return Number(db.prepare('INSERT INTO sources(name,url,type,enabled,notes,region) VALUES(?,?,?,?,?,?)').run(String(p.name).trim().slice(0, 200), url, type, p.enabled === false ? 0 : 1, String(p.notes || '').slice(0, 2000), String(p.region || 'Global').slice(0, 50)).lastInsertRowid);
   }));
   ipcMain.handle('sources:delete', safe((p) => db.prepare('DELETE FROM sources WHERE id=?').run(Number(p.id)).changes > 0));
 
@@ -173,6 +172,7 @@ function registerHandlers() {
   }));
 
   ipcMain.handle('timeline:list', () => db.prepare("SELECT id,title,source_name,severity,region,COALESCE(published_at,created_at) AS event_time,status FROM events ORDER BY event_time DESC LIMIT 200").all());
+  ipcMain.handle('feeds:refresh', async () => refreshRssFeeds(db));
   ipcMain.handle('app:version', () => app.getVersion());
 }
 
@@ -185,3 +185,4 @@ function validUrl(value) {
     return null;
   }
 }
+

@@ -28,7 +28,8 @@ describe('local database foundation', () => {
 
     expect(db.prepare('SELECT COUNT(*) n FROM events').get().n).toBeGreaterThan(0);
     expect(db.prepare("SELECT COUNT(*) n FROM events WHERE status='Demo'").get().n).toBeGreaterThan(0);
-    expect(db.prepare('SELECT COUNT(*) n FROM schema_migrations').get().n).toBe(2);
+    expect(db.prepare('SELECT COUNT(*) n FROM schema_migrations').get().n).toBe(3);
+    expect(db.prepare("SELECT COUNT(*) n FROM sources WHERE type='RSS'").get().n).toBe(7);
   });
 
   it('preserves records after closing and reopening SQLite', () => {
@@ -59,4 +60,5 @@ describe('local database foundation', () => {
     }).toThrow();
   });
 });
+
 

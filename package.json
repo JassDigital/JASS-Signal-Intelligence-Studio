@@ -1,6 +1,6 @@
 {
   "name": "jass-signal-intelligence-studio",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Local-first global open-source intelligence workspace by JASS Digital",
   "main": "electron/main.cjs",
@@ -16,7 +16,8 @@
     "better-sqlite3": "^11.10.0",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "rss-parser": "^3.13.0"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.1",

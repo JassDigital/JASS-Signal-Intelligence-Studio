@@ -65,6 +65,54 @@ function createDatabase(filename) {
     });
     applyFocusMigration();
   }
+  // v3: local RSS collection metadata, source regions, and starter feeds.
+  const migrationV3Done = db.prepare('SELECT 1 FROM schema_migrations WHERE version = 3').get();
+  if (!migrationV3Done) {
+    const sourceColumns = db.prepare('PRAGMA table_info(sources)').all().map(c => c.name);
+    if (!sourceColumns.includes('region')) {
+      db.exec("ALTER TABLE sources ADD COLUMN region TEXT NOT NULL DEFAULT 'Global'");
+    }
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS feed_items (
+        id INTEGER PRIMARY KEY,
+        source_id INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+        guid TEXT NOT NULL,
+        event_id INTEGER REFERENCES events(id) ON DELETE SET NULL,
+        canonical_url TEXT,
+        published_at TEXT,
+        fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(source_id, guid)
+      );
+      CREATE INDEX IF NOT EXISTS idx_feed_items_event ON feed_items(event_id);
+      CREATE INDEX IF NOT EXISTS idx_sources_enabled_type ON sources(enabled,type);
+    `);
+
+    const seedSource = db.prepare(`
+      INSERT INTO sources(name,url,type,enabled,notes,region)
+      SELECT ?, ?, 'RSS', 1, ?, ?
+      WHERE NOT EXISTS (SELECT 1 FROM sources WHERE url = ?)
+    `);
+    const starterFeeds = [
+      ['Press Information Bureau — India', 'https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=1',
+       'Official Government of India press releases. Public feed; manually refreshed.', 'India'],
+      ['Global Affairs Canada — All News', 'https://api.io.canada.ca/io-server/gc/news/en/v2?atomtitle=Global+Affairs+Canada+news&dept=departmentofforeignaffairstradeanddevelopment&format=atom&orderBy=desc&pick=100&publishedDate%3E=2025-01-01&sort=publishedDate',
+       'Official Global Affairs Canada Atom feed. Public feed; manually refreshed.', 'Canada'],
+      ['Government of Canada — National News', 'https://api.io.canada.ca/io-server/gc/news/en/v2?atomtitle=National+News&format=atom&orderBy=desc&pick=100&publishedDate%3E=2021-10-25&sort=publishedDate',
+       'Official Government of Canada national news Atom feed. Public feed; manually refreshed.', 'Canada'],
+      ['Immigration, Refugees and Citizenship Canada — News', 'https://api.io.canada.ca/io-server/gc/news/en/v2?dept=departmentofcitizenshipandimmigration&sort=publishedDate&orderBy=desc&publishedDate%3E=2021-07-23&pick=50&format=atom&atomtitle=Immigration%2C%20Refugees%20and%20Citizenship%20Canada',
+       'Official IRCC news Atom feed. Public feed; manually refreshed.', 'Canada'],
+      ['The Hindu — India National News', 'https://www.thehindu.com/news/national/feeder/default.rss',
+       'Indian newspaper national news feed. Headlines retain links to original articles.', 'India'],
+      ['CBC News — Top Stories', 'https://www.cbc.ca/webfeed/rss/rss-topstories',
+       'Canadian public broadcaster news feed. Headlines retain links to original articles.', 'Canada'],
+      ['BBC News — World', 'https://feeds.bbci.co.uk/news/world/rss.xml',
+       'International world-news feed for wider context.', 'Global']
+    ];
+    for (const feed of starterFeeds) seedSource.run(feed[0], feed[1], feed[2], feed[3], feed[1]);
+
+    db.prepare('INSERT OR IGNORE INTO schema_migrations(version) VALUES (3)').run();
+  }
   return db;
 }
 module.exports = { createDatabase };
+

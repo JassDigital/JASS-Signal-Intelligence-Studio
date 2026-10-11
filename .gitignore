@@ -16,3 +16,8 @@ JASS-Apply-India-Canada-Focus.ps1
 # Local backup files
 *.bak
 *.bak.*
+JASS-Apply-v0.2-RSS-Feeds.ps1
+JASS-Apply-*.ps1
+JASS-Enable-*.ps1
+JASS-Checkpoint-*.ps1
+JASS-Push-*.ps1
