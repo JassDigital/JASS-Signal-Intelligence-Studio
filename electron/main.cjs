@@ -171,6 +171,21 @@ function registerHandlers() {
     return Object.fromEntries(db.prepare('SELECT key,value FROM settings').all().map(x => [x.key, x.value]));
   }));
 
+  ipcMain.handle('saved:list', () => db.prepare(
+    "SELECT e.*, s.note AS saved_note, s.saved_at FROM saved_items s JOIN events e ON e.id = s.event_id ORDER BY s.saved_at DESC"
+  ).all());
+
+  ipcMain.handle('saved:toggle', (_event, payload) => {
+    const eventId = Number(payload?.eventId);
+    if (!Number.isSafeInteger(eventId) || eventId <= 0) throw new Error('A valid article ID is required.');
+    const existing = db.prepare('SELECT id FROM saved_items WHERE event_id = ?').get(eventId);
+    if (existing) {
+      db.prepare('DELETE FROM saved_items WHERE event_id = ?').run(eventId);
+      return { saved: false };
+    }
+    db.prepare('INSERT INTO saved_items(event_id, note) VALUES(?, ?)').run(eventId, String(payload?.note || '').slice(0, 2000));
+    return { saved: true };
+  });
   ipcMain.handle('timeline:list', () => db.prepare("SELECT id,title,source_name,severity,region,COALESCE(published_at,created_at) AS event_time,status FROM events ORDER BY event_time DESC LIMIT 200").all());
   ipcMain.handle('feeds:refresh', async () => refreshRssFeeds(db));
   ipcMain.handle('app:version', () => app.getVersion());

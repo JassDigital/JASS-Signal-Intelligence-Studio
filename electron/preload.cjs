@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld('jass', {
   topics: { list: () => ipcRenderer.invoke('topics:list'), save: (data) => ipcRenderer.invoke('topics:save', data), delete: (id) => ipcRenderer.invoke('topics:delete', { id }) },
   settings: { get: () => ipcRenderer.invoke('settings:get'), save: (data) => ipcRenderer.invoke('settings:save', data) },
   timeline: { list: () => ipcRenderer.invoke('timeline:list') },
+  saved: { list: () => ipcRenderer.invoke('saved:list'), toggle: (eventId, note = '') => ipcRenderer.invoke('saved:toggle', { eventId, note }) },
   app: { version: () => ipcRenderer.invoke('app:version') }
 });
